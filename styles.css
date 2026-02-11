@@ -485,6 +485,10 @@ textarea:focus {
     display: none;
 }
 
+.modal.full-screen {
+    background: rgba(0,0,0,0.9);
+}
+
 .modal-content {
     background: var(--bg-secondary);
     padding: 25px;
@@ -492,6 +496,15 @@ textarea:focus {
     border: 1px solid var(--border);
     width: 100%;
     max-width: 400px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.graph-content {
+    max-width: 90vw;
+    height: 90vh;
+    padding: 0;
 }
 
 .modal-header {
@@ -499,6 +512,12 @@ textarea:focus {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--border);
+}
+
+.graph-content .modal-header {
+    margin-bottom: 0;
 }
 
 .close-modal {
@@ -511,4 +530,39 @@ textarea:focus {
     display: flex;
     gap: 10px;
     flex-direction: column;
+}
+
+/* Graph Styles */
+.graph-container {
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg-primary);
+}
+
+.graph-controls {
+    padding: 10px;
+    background: var(--bg-tertiary);
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+}
+
+.node circle {
+    stroke: #fff;
+    stroke-width: 2px;
+}
+
+.node text {
+    fill: var(--text-primary);
+    font-size: 12px;
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.link {
+    stroke: var(--text-secondary);
+    stroke-opacity: 0.6;
+    stroke-width: 1.5px;
 }

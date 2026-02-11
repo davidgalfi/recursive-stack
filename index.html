@@ -6,6 +6,8 @@
     <title>The Recursive Stack</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- D3.js for Graph Visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -42,6 +44,9 @@
             </div>
 
             <div class="controls">
+                <button id="viewGraphBtn" class="btn btn-primary" title="Visualize Knowledge Graph">
+                    <span class="icon">🕸️</span> View Graph
+                </button>
                 <button id="exportBtn" class="btn btn-secondary" title="Download JSON/Markdown">
                     <span class="icon">📥</span> Export Data
                 </button>
@@ -112,12 +117,26 @@
         </main>
     </div>
 
+    <!-- Graph Modal -->
+    <div id="graphModal" class="modal hidden full-screen">
+        <div class="modal-content graph-content">
+            <div class="modal-header">
+                <h2>🕸️ Knowledge Graph</h2>
+                <span class="close-modal" id="closeGraphModal">&times;</span>
+            </div>
+            <div id="graphContainer" class="graph-container"></div>
+            <div class="graph-controls">
+                <p>Drag nodes to move them. Release to snap back.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Export Modal -->
     <div id="exportModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Export Data</h2>
-                <span class="close-modal">&times;</span>
+                <span class="close-modal" id="closeExportModal">&times;</span>
             </div>
             <div class="modal-body">
                 <p>Choose format:</p>
