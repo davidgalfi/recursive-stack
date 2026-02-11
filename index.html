@@ -42,6 +42,9 @@
             </div>
 
             <div class="controls">
+                <button id="exportBtn" class="btn btn-secondary" title="Download JSON/Markdown">
+                    <span class="icon">📥</span> Export Data
+                </button>
                 <button id="deleteSessionBtn" class="btn btn-danger">
                     <span class="icon">🗑️</span> Delete Session
                 </button>
@@ -107,6 +110,23 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Export Data</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Choose format:</p>
+                <div class="export-options">
+                    <button id="exportJsonBtn" class="btn btn-primary">JSON (Backup)</button>
+                    <button id="exportMdBtn" class="btn btn-secondary">Markdown (Readable)</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

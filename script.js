@@ -46,7 +46,12 @@ class RecursiveStack {
             maxDepth: document.getElementById('maxDepth'),
             resolvedSection: document.getElementById('resolvedSection'),
             resolvedContainer: document.getElementById('resolvedContainer'),
-            goalText: document.getElementById('goalText')
+            goalText: document.getElementById('goalText'),
+            exportBtn: document.getElementById('exportBtn'),
+            exportModal: document.getElementById('exportModal'),
+            exportJsonBtn: document.getElementById('exportJsonBtn'),
+            exportMdBtn: document.getElementById('exportMdBtn'),
+            closeModal: document.querySelector('.close-modal')
         };
     }
 
@@ -57,6 +62,10 @@ class RecursiveStack {
         this.dom.popBtn.addEventListener('click', () => this.pop());
         this.dom.clearBtn.addEventListener('click', () => this.deleteSession());
         this.dom.newSessionBtn.addEventListener('click', () => this.createNewSession());
+        this.dom.exportBtn.addEventListener('click', () => this.showExportModal());
+        this.dom.closeModal.addEventListener('click', () => this.hideExportModal());
+        this.dom.exportJsonBtn.addEventListener('click', () => this.exportJSON());
+        this.dom.exportMdBtn.addEventListener('click', () => this.exportMarkdown());
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -65,6 +74,7 @@ class RecursiveStack {
             }
             if (e.key === 'Escape') {
                 if (!this.dom.popBtn.disabled) this.pop();
+                this.hideExportModal();
             }
         });
     }
@@ -127,6 +137,60 @@ class RecursiveStack {
             this.saveGlobal();
             this.renderSessionList();
         }
+    }
+
+    // --- Export Logic ---
+
+    showExportModal() {
+        this.dom.exportModal.classList.remove('hidden');
+    }
+
+    hideExportModal() {
+        this.dom.exportModal.classList.add('hidden');
+    }
+
+    exportJSON() {
+        const dataStr = JSON.stringify(this.sessions, null, 2);
+        this.downloadFile(dataStr, `recursive-stack-backup-${Date.now()}.json`, 'application/json');
+    }
+
+    exportMarkdown() {
+        let md = `# Recursive Stack Export\nDate: ${new Date().toLocaleDateString()}\n\n`;
+        
+        Object.values(this.sessions).forEach(session => {
+            const root = session.nodes[0];
+            md += `## Topic: ${root.question}\n\n`;
+            
+            // Recursive function to print tree
+            const printNode = (nodeId, level) => {
+                const node = session.nodes[nodeId];
+                const indent = '  '.repeat(level);
+                md += `${indent}- **${node.question}**\n`;
+                md += `${indent}  > ${node.answer.replace(/\n/g, `\n${indent}  > `)}\n\n`;
+                
+                if (node.children) {
+                    node.children.forEach(childId => printNode(childId, level + 1));
+                }
+            };
+            
+            printNode(0, 0);
+            md += `---\n\n`;
+        });
+
+        this.downloadFile(md, `recursive-stack-notes-${Date.now()}.md`, 'text/markdown');
+    }
+
+    downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type: type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.hideExportModal();
     }
 
     // --- Data Logic ---
