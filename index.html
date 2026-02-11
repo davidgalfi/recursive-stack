@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>The Recursive Stack</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -11,11 +11,17 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Mobile Overlay -->
+        <div id="mobileOverlay" class="mobile-overlay hidden"></div>
+
         <!-- Sidebar / Stats -->
-        <aside class="sidebar">
-            <div class="brand">
-                <h1>⚡ Recursive Stack</h1>
-                <p>Depth-First Learning</p>
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-top">
+                <div class="brand">
+                    <h1>⚡ Recursive Stack</h1>
+                    <p>Depth-First Learning</p>
+                </div>
+                <button id="closeSidebarBtn" class="btn-icon mobile-only">&times;</button>
             </div>
             
             <div class="library-section">
@@ -60,6 +66,7 @@
         <main class="main-content">
             <!-- Navigation Path -->
             <nav class="breadcrumbs-container">
+                <button id="mobileMenuBtn" class="btn-icon mobile-only">☰</button>
                 <div id="breadcrumbs" class="breadcrumbs">
                     <span class="crumb active">Root</span>
                 </div>
@@ -95,11 +102,11 @@
                 <!-- Action Bar -->
                 <div class="action-bar">
                     <button id="saveBtn" class="btn btn-primary" disabled>
-                        <span>Analyize & Link</span>
+                        <span>Analyze & Link</span>
                         <span class="shortcut">Cmd/Ctrl + Enter</span>
                     </button>
                     <button id="popBtn" class="btn btn-secondary" disabled>
-                        <span>⬆️ Pop Stack (Complete)</span>
+                        <span>⬆️ Pop Stack</span>
                         <span class="shortcut">Esc</span>
                     </button>
                 </div>
@@ -126,7 +133,7 @@
             </div>
             <div id="graphContainer" class="graph-container"></div>
             <div class="graph-controls">
-                <p>Drag nodes to move them. Release to snap back.</p>
+                <p>Drag nodes to move. Pinch to zoom.</p>
             </div>
         </div>
     </div>
