@@ -1,14 +1,15 @@
 class RecursiveStack {
     constructor() {
-        // Core Data Structure
-        // nodes: Map of ID -> Node Object { id, question, answer, childrenIDs[] }
-        // path: Array of IDs representing current navigation stack
+        // Core Data (v3 Schema)
+        // sessions: Map of sessionID -> { nodes, path, nodeIdCounter, maxDepthReached, created }
+        this.sessions = {};
+        this.currentSessionId = null;
+        
+        // Runtime cache for current session
         this.nodes = {};
         this.path = [];
         this.nodeIdCounter = 0;
         this.maxDepthReached = 0;
-        
-        // Runtime state
         this.currentId = null;
         
         this.init();
@@ -17,15 +18,16 @@ class RecursiveStack {
     init() {
         this.cacheDOM();
         this.bindEvents();
-        this.loadState();
+        this.loadStorage();
         
-        if (this.path.length === 0) {
-            this.createRoot();
+        if (!this.currentSessionId || !this.sessions[this.currentSessionId]) {
+            this.createNewSession();
         } else {
-            this.currentId = this.path[this.path.length - 1];
+            this.loadSession(this.currentSessionId);
         }
 
         this.render();
+        this.renderSessionList();
     }
 
     cacheDOM() {
@@ -36,20 +38,25 @@ class RecursiveStack {
             breadcrumbs: document.getElementById('breadcrumbs'),
             saveBtn: document.getElementById('saveBtn'),
             popBtn: document.getElementById('popBtn'),
-            clearBtn: document.getElementById('clearBtn'),
+            clearBtn: document.getElementById('deleteSessionBtn'),
+            newSessionBtn: document.getElementById('newSessionBtn'),
+            sessionList: document.getElementById('sessionList'),
             depth: document.getElementById('currentDepth'),
             nodeCount: document.getElementById('nodeCount'),
             maxDepth: document.getElementById('maxDepth'),
             resolvedSection: document.getElementById('resolvedSection'),
-            resolvedContainer: document.getElementById('resolvedContainer')
+            resolvedContainer: document.getElementById('resolvedContainer'),
+            goalText: document.getElementById('goalText')
         };
     }
 
     bindEvents() {
         this.dom.answer.addEventListener('input', () => this.handleInput());
+        this.dom.question.addEventListener('input', () => this.handleQuestionInput()); // Update session name
         this.dom.saveBtn.addEventListener('click', () => this.generateLinks());
         this.dom.popBtn.addEventListener('click', () => this.pop());
-        this.dom.clearBtn.addEventListener('click', () => this.reset());
+        this.dom.clearBtn.addEventListener('click', () => this.deleteSession());
+        this.dom.newSessionBtn.addEventListener('click', () => this.createNewSession());
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -62,21 +69,67 @@ class RecursiveStack {
         });
     }
 
-    // --- Data Management ---
+    // --- Session Management ---
 
-    createRoot() {
+    createNewSession() {
+        const id = Date.now().toString();
+        this.sessions[id] = {
+            id: id,
+            nodes: {},
+            path: [],
+            nodeIdCounter: 1,
+            maxDepthReached: 0,
+            created: Date.now()
+        };
+        
+        // Init Root
         const root = {
             id: 0,
-            question: 'Main Problem',
+            question: 'New Topic',
             answer: '',
             children: [],
             depth: 0
         };
-        this.nodes[0] = root;
-        this.path = [0];
-        this.currentId = 0;
-        this.nodeIdCounter = 1;
+        this.sessions[id].nodes[0] = root;
+        this.sessions[id].path = [0];
+
+        this.currentSessionId = id;
+        this.loadSession(id);
+        this.saveGlobal();
+        this.renderSessionList();
     }
+
+    loadSession(sessionId) {
+        const s = this.sessions[sessionId];
+        this.nodes = s.nodes;
+        this.path = s.path;
+        this.nodeIdCounter = s.nodeIdCounter;
+        this.maxDepthReached = s.maxDepthReached;
+        this.currentId = this.path[this.path.length - 1];
+        this.currentSessionId = sessionId;
+        this.render();
+    }
+
+    deleteSession() {
+        if (Object.keys(this.sessions).length <= 1) {
+            if (confirm('Clear current session?')) {
+                delete this.sessions[this.currentSessionId];
+                this.createNewSession();
+            }
+            return;
+        }
+
+        if (confirm('Delete this session permanently?')) {
+            delete this.sessions[this.currentSessionId];
+            // Load first available
+            const nextId = Object.keys(this.sessions)[0];
+            this.loadSession(nextId);
+            this.saveGlobal();
+            this.renderSessionList();
+        }
+    }
+
+    // --- Data Logic ---
 
     createChild(word) {
         const id = this.nodeIdCounter++;
@@ -84,7 +137,7 @@ class RecursiveStack {
         
         const child = {
             id: id,
-            question: word, // Default question is the word itself
+            question: word, 
             answer: '',
             children: [],
             depth: parent.depth + 1
@@ -93,17 +146,15 @@ class RecursiveStack {
         this.nodes[id] = child;
         parent.children.push(id);
         
-        // Navigate to child
         this.path.push(id);
         this.currentId = id;
 
-        // Stats
         if (child.depth > this.maxDepthReached) this.maxDepthReached = child.depth;
 
-        this.save();
+        this.syncSessionData();
+        this.saveGlobal();
         this.render();
         
-        // Auto-focus question to let user refine "What is X?"
         this.dom.question.focus();
     }
 
@@ -111,7 +162,22 @@ class RecursiveStack {
         const node = this.nodes[this.currentId];
         node.question = question;
         node.answer = answer;
-        this.save();
+        this.syncSessionData();
+        this.saveGlobal();
+        
+        if (this.currentId === 0) {
+            this.renderSessionList(); // Update sidebar name
+            this.renderGoal(); // Update header goal
+        }
+    }
+
+    syncSessionData() {
+        // Sync local cache back to session object
+        const s = this.sessions[this.currentSessionId];
+        s.nodes = this.nodes;
+        s.path = this.path;
+        s.nodeIdCounter = this.nodeIdCounter;
+        s.maxDepthReached = this.maxDepthReached;
     }
 
     // --- Actions ---
@@ -121,12 +187,21 @@ class RecursiveStack {
         this.dom.saveBtn.disabled = !hasText;
     }
 
+    handleQuestionInput() {
+        // Auto-save title as you type (for root node mainly)
+        if (this.currentId === 0) {
+            this.nodes[0].question = this.dom.question.value;
+            this.renderSessionList();
+            this.renderGoal();
+            this.saveGlobal(); // Save title change immediately
+        }
+    }
+
     generateLinks() {
         const text = this.dom.answer.value;
         const question = this.dom.question.value;
         this.updateCurrentNode(question, text);
 
-        // Regex for tokens: unicode letters, numbers, apostrophes
         const tokens = text.match(/[\p{L}\d']+/gu) || [];
         const uniqueTokens = [...new Set(tokens)];
 
@@ -146,24 +221,14 @@ class RecursiveStack {
     pop() {
         if (this.path.length <= 1) return;
         
-        // Save before leaving
         this.updateCurrentNode(this.dom.question.value, this.dom.answer.value);
 
         this.path.pop();
         this.currentId = this.path[this.path.length - 1];
         
+        this.syncSessionData();
+        this.saveGlobal();
         this.render();
-        this.save();
-    }
-
-    reset() {
-        if (confirm('Delete everything?')) {
-            localStorage.removeItem('recursiveStack_v2');
-            this.nodes = {};
-            this.path = [];
-            this.createRoot();
-            this.render();
-        }
     }
 
     // --- Rendering ---
@@ -171,31 +236,62 @@ class RecursiveStack {
     render() {
         const node = this.nodes[this.currentId];
         
-        // 1. Inputs
         this.dom.question.value = node.question;
         this.dom.answer.value = node.answer;
         
-        // 2. Buttons state
         this.dom.saveBtn.disabled = node.answer.trim().length === 0;
         this.dom.popBtn.disabled = this.path.length <= 1;
 
-        // 3. Stats
         this.dom.depth.textContent = node.depth;
         this.dom.maxDepth.textContent = this.maxDepthReached;
         this.dom.nodeCount.textContent = Object.keys(this.nodes).length;
 
-        // 4. Breadcrumbs
         this.renderBreadcrumbs();
-
-        // 5. Resolved Children (The "History" requested by user)
         this.renderResolvedChildren(node);
+        this.renderGoal();
 
-        // 6. Restore clickable words if answer exists
         if (node.answer) {
             this.generateLinks();
         } else {
             this.dom.clickableWords.innerHTML = '';
         }
+    }
+
+    renderGoal() {
+        // Find root question
+        const root = this.nodes[0];
+        let text = root ? root.question : 'New Topic';
+        if (text.length > 25) text = text.substring(0, 22) + '...';
+        this.dom.goalText.textContent = text;
+        this.dom.goalText.parentElement.title = root ? root.question : 'Original Goal';
+    }
+
+    renderSessionList() {
+        this.dom.sessionList.innerHTML = '';
+        
+        // Sort by created desc
+        const sortedIds = Object.keys(this.sessions).sort((a, b) => 
+            this.sessions[b].created - this.sessions[a].created
+        );
+
+        sortedIds.forEach(id => {
+            const s = this.sessions[id];
+            const div = document.createElement('div');
+            div.className = `session-item ${id === this.currentSessionId ? 'active' : ''}`;
+            
+            // Use root question as title
+            const title = s.nodes[0] ? s.nodes[0].question : 'Untitled';
+            div.textContent = title || 'Untitled';
+            
+            div.onclick = () => {
+                if (id !== this.currentSessionId) {
+                    this.loadSession(id);
+                    this.renderSessionList(); // update active class
+                }
+            };
+            
+            this.dom.sessionList.appendChild(div);
+        });
     }
 
     renderBreadcrumbs() {
@@ -209,14 +305,13 @@ class RecursiveStack {
             if (label.length > 15) label = label.substring(0, 12) + '...';
             span.textContent = label;
             
-            // Allow clicking crumbs to jump back
             span.onclick = () => {
-                // Cut path to this index
                 this.updateCurrentNode(this.dom.question.value, this.dom.answer.value);
                 this.path = this.path.slice(0, index + 1);
                 this.currentId = id;
+                this.syncSessionData();
+                this.saveGlobal();
                 this.render();
-                this.save();
             };
             
             this.dom.breadcrumbs.appendChild(span);
@@ -234,7 +329,7 @@ class RecursiveStack {
         let hasContent = false;
         node.children.forEach(childId => {
             const child = this.nodes[childId];
-            if (child.answer) { // Only show if answered
+            if (child.answer) { 
                 hasContent = true;
                 const card = document.createElement('div');
                 card.className = 'card';
@@ -242,7 +337,6 @@ class RecursiveStack {
                     <h3>✔ ${child.question}</h3>
                     <p>${child.answer}</p>
                 `;
-                // Allow editing again?
                 card.onclick = () => {
                     this.path.push(childId);
                     this.currentId = childId;
@@ -263,63 +357,50 @@ class RecursiveStack {
 
     // --- Storage ---
 
-    save() {
-        const state = {
-            nodes: this.nodes,
-            path: this.path,
-            nodeIdCounter: this.nodeIdCounter,
-            maxDepthReached: this.maxDepthReached
+    saveGlobal() {
+        const data = {
+            currentSessionId: this.currentSessionId,
+            sessions: this.sessions
         };
-        localStorage.setItem('recursiveStack_v2', JSON.stringify(state));
+        localStorage.setItem('recursiveStack_v3', JSON.stringify(data));
     }
 
-    loadState() {
-        // Try load v2
-        const v2 = localStorage.getItem('recursiveStack_v2');
-        if (v2) {
-            const parsed = JSON.parse(v2);
-            this.nodes = parsed.nodes;
-            this.path = parsed.path;
-            this.nodeIdCounter = parsed.nodeIdCounter;
-            this.maxDepthReached = parsed.maxDepthReached;
-            return;
+    loadStorage() {
+        // v3 Load
+        const v3 = localStorage.getItem('recursiveStack_v3');
+        if (v3) {
+            try {
+                const parsed = JSON.parse(v3);
+                this.sessions = parsed.sessions;
+                this.currentSessionId = parsed.currentSessionId;
+                return;
+            } catch (e) {
+                console.error("v3 load failed", e);
+            }
         }
 
-        // Try migrate v1 (The "broken" stack array)
-        const v1 = localStorage.getItem('recursiveStack');
-        if (v1) {
+        // Migration from v2
+        const v2 = localStorage.getItem('recursiveStack_v2');
+        if (v2) {
             try {
-                const parsed = JSON.parse(v1);
-                // We can only recover the current stack path, as v1 deleted popped nodes.
-                // We will convert the 'stack' array into our 'nodes' map.
+                const parsed = JSON.parse(v2);
+                const newId = Date.now().toString();
                 
-                this.nodes = {};
-                this.path = [];
+                this.sessions = {};
+                this.sessions[newId] = {
+                    id: newId,
+                    nodes: parsed.nodes,
+                    path: parsed.path,
+                    nodeIdCounter: parsed.nodeIdCounter,
+                    maxDepthReached: parsed.maxDepthReached,
+                    created: Date.now()
+                };
+                this.currentSessionId = newId;
                 
-                parsed.stack.forEach(oldNode => {
-                    this.nodes[oldNode.id] = {
-                        id: oldNode.id,
-                        question: oldNode.question,
-                        answer: oldNode.answer,
-                        children: [], // Lost relations for siblings, but path is preserved
-                        depth: oldNode.depth
-                    };
-                    this.path.push(oldNode.id);
-                    
-                    // Rebuild parent-child relationship
-                    if (this.path.length > 1) {
-                        const parentId = this.path[this.path.length - 2];
-                        this.nodes[parentId].children.push(oldNode.id);
-                    }
-                });
-                
-                this.nodeIdCounter = parsed.nodeIdCounter;
-                this.maxDepthReached = parsed.maxDepthReached;
-                
-                console.log("Migrated from v1 to v2");
-            } catch (e) {
-                console.error("Migration failed", e);
-            }
+                localStorage.removeItem('recursiveStack_v2'); // Cleanup
+                this.saveGlobal();
+                console.log("Migrated v2 -> v3");
+            } catch (e) { console.error("v2 migration failed", e); }
         }
     }
 }
