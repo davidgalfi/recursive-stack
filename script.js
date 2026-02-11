@@ -76,8 +76,9 @@ class RecursiveStack {
     }
 
     generateClickableWords(text) {
-        // Split into words, remove punctuation for clickability
-        const words = text.match(/\b[\w']+\b/g) || [];
+        // Split into words, supporting Unicode characters (Hungarian accented letters)
+        // Uses \p{L} for any Unicode letter, \d for digits, and ' for apostrophes
+        const words = text.match(/[\p{L}\d']+/gu) || [];
         const uniqueWords = [...new Set(words)].sort();
 
         this.clickableWords.innerHTML = '';
@@ -171,9 +172,7 @@ class RecursiveStack {
         this.stack.forEach((node, index) => {
             const crumb = document.createElement('span');
             crumb.className = 'breadcrumb';
-            if (index === this.stack.length - 1) {
-                crumb.classList.add('active');
-            }
+            if (index === this.stack.length - 1) {\n                crumb.classList.add('active');\n            }
             
             // Truncate long questions
             let text = node.question;
