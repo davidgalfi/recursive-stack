@@ -16,6 +16,16 @@
                 <p>Depth-First Learning</p>
             </div>
             
+            <div class="library-section">
+                <div class="library-header">
+                    <span class="label">SAVED SESSIONS</span>
+                    <button id="newSessionBtn" class="btn-icon" title="New Topic">+</button>
+                </div>
+                <div id="sessionList" class="session-list">
+                    <!-- Sessions injected here -->
+                </div>
+            </div>
+
             <div class="stats-panel">
                 <div class="stat-row">
                     <span class="stat-label">Current Depth</span>
@@ -32,8 +42,8 @@
             </div>
 
             <div class="controls">
-                <button id="clearBtn" class="btn btn-danger">
-                    <span class="icon">🗑️</span> Reset All
+                <button id="deleteSessionBtn" class="btn btn-danger">
+                    <span class="icon">🗑️</span> Delete Session
                 </button>
             </div>
         </aside>
@@ -44,6 +54,9 @@
             <nav class="breadcrumbs-container">
                 <div id="breadcrumbs" class="breadcrumbs">
                     <span class="crumb active">Root</span>
+                </div>
+                <div class="goal-display" id="goalDisplay" title="Original Goal">
+                    🎯 <span id="goalText">Loading...</span>
                 </div>
             </nav>
 
