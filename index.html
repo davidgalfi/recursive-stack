@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Recursive Stack - Deep Learning Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 The Recursive Stack</h1>
+            <p class="subtitle">Force yourself to understand deeply, one concept at a time</p>
+        </header>
+
+        <div class="breadcrumbs" id="breadcrumbs">
+            <span class="breadcrumb active">Root</span>
+        </div>
+
+        <div class="depth-indicator" id="depthIndicator">
+            Depth: <span id="currentDepth">0</span>
+        </div>
+
+        <div class="main-content">
+            <div class="question-section">
+                <label for="questionInput">What do you want to understand?</label>
+                <textarea 
+                    id="questionInput" 
+                    placeholder="E.g., 'I need to understand Pointers in C'"
+                    rows="3"></textarea>
+            </div>
+
+            <div class="answer-section">
+                <label for="answerInput">Your explanation:</label>
+                <textarea 
+                    id="answerInput" 
+                    placeholder="Write your understanding here. Click on any word you're not 100% sure about to dive deeper."
+                    rows="8"></textarea>
+                <div id="clickableWords" class="clickable-words"></div>
+            </div>
+
+            <div class="actions">
+                <button id="saveBtn" class="btn btn-primary" disabled>
+                    💾 Save & Generate Words
+                </button>
+                <button id="popBtn" class="btn btn-secondary" disabled>
+                    ⬆️ Pop Up (Return)
+                </button>
+                <button id="clearBtn" class="btn btn-danger">
+                    🗑️ Clear All Data
+                </button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">Nodes Explored:</span>
+                    <span id="nodeCount" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Max Depth Reached:</span>
+                    <span id="maxDepth" class="stat-value">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <details>
+                <summary>❓ How to use this tool</summary>
+                <ol>
+                    <li><strong>Start:</strong> Enter your main question/topic</li>
+                    <li><strong>Explain:</strong> Write your understanding in the answer area</li>
+                    <li><strong>Save:</strong> Click "Save & Generate Words" to break your answer into clickable words</li>
+                    <li><strong>Dive:</strong> Click any word you're not 100% certain about - this creates a new level</li>
+                    <li><strong>Return:</strong> Once you've fully understood the deeper concept, click "Pop Up" to return</li>
+                    <li><strong>Repeat:</strong> Keep diving until you hit bedrock understanding</li>
+                </ol>
+                <p class="tip">💡 <strong>The trick:</strong> Be honest with yourself. If there's even 1% doubt about a word, dive into it!</p>
+            </details>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
