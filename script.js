@@ -326,8 +326,32 @@ class RecursiveStack {
     }
 
     handleInput() {
-        const hasText = this.dom.answer.value.trim().length > 0;
-        this.dom.saveBtn.disabled = !hasText;
+        const currentText = this.dom.answer.value.trim();
+        const node = this.nodes[this.currentId];
+        
+        // Logic: Enable save if text is different from saved OR if empty (to disable)
+        // Wait, if empty -> Disable.
+        // If same as saved -> Show "Analyzed" state (Secondary).
+        // If different -> Show "Analyze" state (Primary).
+
+        const isEmpty = currentText.length === 0;
+        const isSaved = currentText === node.answer.trim();
+
+        if (isEmpty) {
+            this.dom.saveBtn.disabled = true;
+            this.dom.saveBtn.innerHTML = `<span>Analyze & Link</span><span class="shortcut">Cmd/Ctrl + Enter</span>`;
+            this.dom.saveBtn.className = 'btn btn-primary';
+        } else if (isSaved) {
+            // Already saved/analyzed
+            this.dom.saveBtn.disabled = false;
+            this.dom.saveBtn.innerHTML = `<span>✅ Links Updated</span><span class="shortcut">Cmd/Ctrl + Enter</span>`;
+            this.dom.saveBtn.className = 'btn btn-secondary'; // Visual cue
+        } else {
+            // Changed / Dirty
+            this.dom.saveBtn.disabled = false;
+            this.dom.saveBtn.innerHTML = `<span>Analyze & Link</span><span class="shortcut">Cmd/Ctrl + Enter</span>`;
+            this.dom.saveBtn.className = 'btn btn-primary';
+        }
     }
 
     handleQuestionInput() {
@@ -343,9 +367,12 @@ class RecursiveStack {
         const text = this.dom.answer.value;
         const question = this.dom.question.value;
         this.updateCurrentNode(question, text);
+
         const tokens = text.match(/[\p{L}\d']+/gu) || [];
         const uniqueTokens = [...new Set(tokens)];
+
         this.dom.clickableWords.innerHTML = '';
+        
         uniqueTokens.forEach(token => {
             const btn = document.createElement('span');
             btn.className = 'word';
@@ -353,7 +380,11 @@ class RecursiveStack {
             btn.onclick = () => this.createChild(token);
             this.dom.clickableWords.appendChild(btn);
         });
+
         this.dom.popBtn.disabled = this.path.length <= 1;
+        
+        // Update button state immediately
+        this.handleInput(); 
     }
 
     pop() {
@@ -370,16 +401,33 @@ class RecursiveStack {
         const node = this.nodes[this.currentId];
         this.dom.question.value = node.question;
         this.dom.answer.value = node.answer;
-        this.dom.saveBtn.disabled = node.answer.trim().length === 0;
+        
+        // Update button states
+        this.handleInput(); // Re-evaluates save button state based on loaded text
         this.dom.popBtn.disabled = this.path.length <= 1;
+        
         this.dom.depth.textContent = node.depth;
         this.dom.maxDepth.textContent = this.maxDepthReached;
         this.dom.nodeCount.textContent = Object.keys(this.nodes).length;
+        
         this.renderBreadcrumbs();
         this.renderResolvedChildren(node);
         this.renderGoal();
+        
+        // Always regenerate links if text exists, to ensure UI is consistent
         if (node.answer) {
-            this.generateLinks();
+             // We duplicate logic here to avoid re-saving to DB during render, which caused recursion logic issues before
+             // Just purely visual generation:
+            const tokens = node.answer.match(/[\p{L}\d']+/gu) || [];
+            const uniqueTokens = [...new Set(tokens)];
+            this.dom.clickableWords.innerHTML = '';
+            uniqueTokens.forEach(token => {
+                const btn = document.createElement('span');
+                btn.className = 'word';
+                btn.textContent = token;
+                btn.onclick = () => this.createChild(token);
+                this.dom.clickableWords.appendChild(btn);
+            });
         } else {
             this.dom.clickableWords.innerHTML = '';
         }
