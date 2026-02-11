@@ -172,7 +172,9 @@ class RecursiveStack {
         this.stack.forEach((node, index) => {
             const crumb = document.createElement('span');
             crumb.className = 'breadcrumb';
-            if (index === this.stack.length - 1) {\n                crumb.classList.add('active');\n            }
+            if (index === this.stack.length - 1) {
+                crumb.classList.add('active');
+            }
             
             // Truncate long questions
             let text = node.question;
