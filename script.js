@@ -1,234 +1,328 @@
-// The Recursive Stack - Core Logic
-
 class RecursiveStack {
     constructor() {
-        this.stack = [];
-        this.currentNode = null;
+        // Core Data Structure
+        // nodes: Map of ID -> Node Object { id, question, answer, childrenIDs[] }
+        // path: Array of IDs representing current navigation stack
+        this.nodes = {};
+        this.path = [];
         this.nodeIdCounter = 0;
-        this.totalNodes = 0;
         this.maxDepthReached = 0;
-        this.loadFromStorage();
+        
+        // Runtime state
+        this.currentId = null;
+        
         this.init();
     }
 
     init() {
-        // DOM elements
-        this.questionInput = document.getElementById('questionInput');
-        this.answerInput = document.getElementById('answerInput');
-        this.clickableWords = document.getElementById('clickableWords');
-        this.breadcrumbs = document.getElementById('breadcrumbs');
-        this.saveBtn = document.getElementById('saveBtn');
-        this.popBtn = document.getElementById('popBtn');
-        this.clearBtn = document.getElementById('clearBtn');
-        this.depthIndicator = document.getElementById('currentDepth');
-        this.nodeCount = document.getElementById('nodeCount');
-        this.maxDepthDisplay = document.getElementById('maxDepth');
-
-        // Event listeners
-        this.answerInput.addEventListener('input', () => this.onAnswerChange());
-        this.saveBtn.addEventListener('click', () => this.saveAndGenerateWords());
-        this.popBtn.addEventListener('click', () => this.popStack());
-        this.clearBtn.addEventListener('click', () => this.clearAll());
-
-        // Initial state
-        if (this.stack.length === 0) {
-            this.pushRoot();
-        }
+        this.cacheDOM();
+        this.bindEvents();
+        this.loadState();
         
+        if (this.path.length === 0) {
+            this.createRoot();
+        } else {
+            this.currentId = this.path[this.path.length - 1];
+        }
+
         this.render();
     }
 
-    pushRoot() {
-        const rootNode = {
-            id: this.nodeIdCounter++,
-            question: 'Root',
+    cacheDOM() {
+        this.dom = {
+            question: document.getElementById('questionInput'),
+            answer: document.getElementById('answerInput'),
+            clickableWords: document.getElementById('clickableWords'),
+            breadcrumbs: document.getElementById('breadcrumbs'),
+            saveBtn: document.getElementById('saveBtn'),
+            popBtn: document.getElementById('popBtn'),
+            clearBtn: document.getElementById('clearBtn'),
+            depth: document.getElementById('currentDepth'),
+            nodeCount: document.getElementById('nodeCount'),
+            maxDepth: document.getElementById('maxDepth'),
+            resolvedSection: document.getElementById('resolvedSection'),
+            resolvedContainer: document.getElementById('resolvedContainer')
+        };
+    }
+
+    bindEvents() {
+        this.dom.answer.addEventListener('input', () => this.handleInput());
+        this.dom.saveBtn.addEventListener('click', () => this.generateLinks());
+        this.dom.popBtn.addEventListener('click', () => this.pop());
+        this.dom.clearBtn.addEventListener('click', () => this.reset());
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                if (!this.dom.saveBtn.disabled) this.generateLinks();
+            }
+            if (e.key === 'Escape') {
+                if (!this.dom.popBtn.disabled) this.pop();
+            }
+        });
+    }
+
+    // --- Data Management ---
+
+    createRoot() {
+        const root = {
+            id: 0,
+            question: 'Main Problem',
             answer: '',
             children: [],
             depth: 0
         };
-        this.stack.push(rootNode);
-        this.currentNode = rootNode;
-        this.totalNodes++;
+        this.nodes[0] = root;
+        this.path = [0];
+        this.currentId = 0;
+        this.nodeIdCounter = 1;
     }
 
-    onAnswerChange() {
-        const hasContent = this.answerInput.value.trim().length > 0;
-        this.saveBtn.disabled = !hasContent;
-    }
-
-    saveAndGenerateWords() {
-        const question = this.questionInput.value.trim();
-        const answer = this.answerInput.value.trim();
-
-        if (!answer) return;
-
-        // Update current node
-        this.currentNode.question = question || this.currentNode.question;
-        this.currentNode.answer = answer;
-
-        // Generate clickable words
-        this.generateClickableWords(answer);
+    createChild(word) {
+        const id = this.nodeIdCounter++;
+        const parent = this.nodes[this.currentId];
         
-        // Enable pop button
-        this.popBtn.disabled = this.stack.length <= 1;
-
-        this.saveToStorage();
-    }
-
-    generateClickableWords(text) {
-        // Split into words, supporting Unicode characters (Hungarian accented letters)
-        // Uses \p{L} for any Unicode letter, \d for digits, and ' for apostrophes
-        const words = text.match(/[\p{L}\d']+/gu) || [];
-        const uniqueWords = [...new Set(words)].sort();
-
-        this.clickableWords.innerHTML = '';
-        this.clickableWords.classList.add('active');
-
-        uniqueWords.forEach(word => {
-            const span = document.createElement('span');
-            span.className = 'word';
-            span.textContent = word;
-            span.addEventListener('click', () => this.diveInto(word));
-            this.clickableWords.appendChild(span);
-        });
-    }
-
-    diveInto(word) {
-        const newNode = {
-            id: this.nodeIdCounter++,
-            question: `What is "${word}"?`,
+        const child = {
+            id: id,
+            question: word, // Default question is the word itself
             answer: '',
             children: [],
-            depth: this.currentNode.depth + 1,
-            parent: this.currentNode.id
+            depth: parent.depth + 1
         };
 
-        // Add to parent's children
-        this.currentNode.children.push(newNode.id);
-
-        // Push to stack
-        this.stack.push(newNode);
-        this.currentNode = newNode;
-        this.totalNodes++;
-
-        // Update max depth
-        if (newNode.depth > this.maxDepthReached) {
-            this.maxDepthReached = newNode.depth;
-        }
-
-        // Clear clickable words
-        this.clickableWords.classList.remove('active');
-        this.clickableWords.innerHTML = '';
-
-        this.render();
-        this.saveToStorage();
+        this.nodes[id] = child;
+        parent.children.push(id);
         
-        // Focus on answer input
-        this.answerInput.focus();
-    }
+        // Navigate to child
+        this.path.push(id);
+        this.currentId = id;
 
-    popStack() {
-        if (this.stack.length <= 1) return;
+        // Stats
+        if (child.depth > this.maxDepthReached) this.maxDepthReached = child.depth;
 
-        // Remove current node
-        this.stack.pop();
-        this.currentNode = this.stack[this.stack.length - 1];
-
+        this.save();
         this.render();
-        this.saveToStorage();
+        
+        // Auto-focus question to let user refine "What is X?"
+        this.dom.question.focus();
     }
+
+    updateCurrentNode(question, answer) {
+        const node = this.nodes[this.currentId];
+        node.question = question;
+        node.answer = answer;
+        this.save();
+    }
+
+    // --- Actions ---
+
+    handleInput() {
+        const hasText = this.dom.answer.value.trim().length > 0;
+        this.dom.saveBtn.disabled = !hasText;
+    }
+
+    generateLinks() {
+        const text = this.dom.answer.value;
+        const question = this.dom.question.value;
+        this.updateCurrentNode(question, text);
+
+        // Regex for tokens: unicode letters, numbers, apostrophes
+        const tokens = text.match(/[\p{L}\d']+/gu) || [];
+        const uniqueTokens = [...new Set(tokens)];
+
+        this.dom.clickableWords.innerHTML = '';
+        
+        uniqueTokens.forEach(token => {
+            const btn = document.createElement('span');
+            btn.className = 'word';
+            btn.textContent = token;
+            btn.onclick = () => this.createChild(token);
+            this.dom.clickableWords.appendChild(btn);
+        });
+
+        this.dom.popBtn.disabled = this.path.length <= 1;
+    }
+
+    pop() {
+        if (this.path.length <= 1) return;
+        
+        // Save before leaving
+        this.updateCurrentNode(this.dom.question.value, this.dom.answer.value);
+
+        this.path.pop();
+        this.currentId = this.path[this.path.length - 1];
+        
+        this.render();
+        this.save();
+    }
+
+    reset() {
+        if (confirm('Delete everything?')) {
+            localStorage.removeItem('recursiveStack_v2');
+            this.nodes = {};
+            this.path = [];
+            this.createRoot();
+            this.render();
+        }
+    }
+
+    // --- Rendering ---
 
     render() {
-        // Update inputs
-        this.questionInput.value = this.currentNode.question;
-        this.answerInput.value = this.currentNode.answer;
+        const node = this.nodes[this.currentId];
+        
+        // 1. Inputs
+        this.dom.question.value = node.question;
+        this.dom.answer.value = node.answer;
+        
+        // 2. Buttons state
+        this.dom.saveBtn.disabled = node.answer.trim().length === 0;
+        this.dom.popBtn.disabled = this.path.length <= 1;
 
-        // Update breadcrumbs
+        // 3. Stats
+        this.dom.depth.textContent = node.depth;
+        this.dom.maxDepth.textContent = this.maxDepthReached;
+        this.dom.nodeCount.textContent = Object.keys(this.nodes).length;
+
+        // 4. Breadcrumbs
         this.renderBreadcrumbs();
 
-        // Update depth
-        this.depthIndicator.textContent = this.currentNode.depth;
+        // 5. Resolved Children (The "History" requested by user)
+        this.renderResolvedChildren(node);
 
-        // Update stats
-        this.nodeCount.textContent = this.totalNodes;
-        this.maxDepthDisplay.textContent = this.maxDepthReached;
-
-        // Update buttons
-        this.saveBtn.disabled = this.answerInput.value.trim().length === 0;
-        this.popBtn.disabled = this.stack.length <= 1;
-
-        // Regenerate clickable words if answer exists
-        if (this.currentNode.answer) {
-            this.generateClickableWords(this.currentNode.answer);
+        // 6. Restore clickable words if answer exists
+        if (node.answer) {
+            this.generateLinks();
         } else {
-            this.clickableWords.classList.remove('active');
-            this.clickableWords.innerHTML = '';
+            this.dom.clickableWords.innerHTML = '';
         }
     }
 
     renderBreadcrumbs() {
-        this.breadcrumbs.innerHTML = '';
-        
-        this.stack.forEach((node, index) => {
-            const crumb = document.createElement('span');
-            crumb.className = 'breadcrumb';
-            if (index === this.stack.length - 1) {
-                crumb.classList.add('active');
-            }
+        this.dom.breadcrumbs.innerHTML = '';
+        this.path.forEach((id, index) => {
+            const n = this.nodes[id];
+            const span = document.createElement('span');
+            span.className = `crumb ${index === this.path.length - 1 ? 'active' : ''}`;
             
-            // Truncate long questions
-            let text = node.question;
-            if (text.length > 30) {
-                text = text.substring(0, 27) + '...';
-            }
-            crumb.textContent = text;
+            let label = n.question;
+            if (label.length > 15) label = label.substring(0, 12) + '...';
+            span.textContent = label;
             
-            this.breadcrumbs.appendChild(crumb);
+            // Allow clicking crumbs to jump back
+            span.onclick = () => {
+                // Cut path to this index
+                this.updateCurrentNode(this.dom.question.value, this.dom.answer.value);
+                this.path = this.path.slice(0, index + 1);
+                this.currentId = id;
+                this.render();
+                this.save();
+            };
+            
+            this.dom.breadcrumbs.appendChild(span);
         });
     }
 
-    saveToStorage() {
-        const data = {
-            stack: this.stack,
-            nodeIdCounter: this.nodeIdCounter,
-            totalNodes: this.totalNodes,
-            maxDepthReached: this.maxDepthReached
-        };
-        localStorage.setItem('recursiveStack', JSON.stringify(data));
+    renderResolvedChildren(node) {
+        this.dom.resolvedContainer.innerHTML = '';
+        
+        if (!node.children || node.children.length === 0) {
+            this.dom.resolvedSection.classList.add('hidden');
+            return;
+        }
+
+        let hasContent = false;
+        node.children.forEach(childId => {
+            const child = this.nodes[childId];
+            if (child.answer) { // Only show if answered
+                hasContent = true;
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h3>✔ ${child.question}</h3>
+                    <p>${child.answer}</p>
+                `;
+                // Allow editing again?
+                card.onclick = () => {
+                    this.path.push(childId);
+                    this.currentId = childId;
+                    this.render();
+                };
+                card.style.cursor = 'pointer';
+                card.title = "Click to edit";
+                this.dom.resolvedContainer.appendChild(card);
+            }
+        });
+
+        if (hasContent) {
+            this.dom.resolvedSection.classList.remove('hidden');
+        } else {
+            this.dom.resolvedSection.classList.add('hidden');
+        }
     }
 
-    loadFromStorage() {
-        const saved = localStorage.getItem('recursiveStack');
-        if (saved) {
+    // --- Storage ---
+
+    save() {
+        const state = {
+            nodes: this.nodes,
+            path: this.path,
+            nodeIdCounter: this.nodeIdCounter,
+            maxDepthReached: this.maxDepthReached
+        };
+        localStorage.setItem('recursiveStack_v2', JSON.stringify(state));
+    }
+
+    loadState() {
+        // Try load v2
+        const v2 = localStorage.getItem('recursiveStack_v2');
+        if (v2) {
+            const parsed = JSON.parse(v2);
+            this.nodes = parsed.nodes;
+            this.path = parsed.path;
+            this.nodeIdCounter = parsed.nodeIdCounter;
+            this.maxDepthReached = parsed.maxDepthReached;
+            return;
+        }
+
+        // Try migrate v1 (The "broken" stack array)
+        const v1 = localStorage.getItem('recursiveStack');
+        if (v1) {
             try {
-                const data = JSON.parse(saved);
-                this.stack = data.stack || [];
-                this.nodeIdCounter = data.nodeIdCounter || 0;
-                this.totalNodes = data.totalNodes || 0;
-                this.maxDepthReached = data.maxDepthReached || 0;
-                this.currentNode = this.stack[this.stack.length - 1];
+                const parsed = JSON.parse(v1);
+                // We can only recover the current stack path, as v1 deleted popped nodes.
+                // We will convert the 'stack' array into our 'nodes' map.
+                
+                this.nodes = {};
+                this.path = [];
+                
+                parsed.stack.forEach(oldNode => {
+                    this.nodes[oldNode.id] = {
+                        id: oldNode.id,
+                        question: oldNode.question,
+                        answer: oldNode.answer,
+                        children: [], // Lost relations for siblings, but path is preserved
+                        depth: oldNode.depth
+                    };
+                    this.path.push(oldNode.id);
+                    
+                    // Rebuild parent-child relationship
+                    if (this.path.length > 1) {
+                        const parentId = this.path[this.path.length - 2];
+                        this.nodes[parentId].children.push(oldNode.id);
+                    }
+                });
+                
+                this.nodeIdCounter = parsed.nodeIdCounter;
+                this.maxDepthReached = parsed.maxDepthReached;
+                
+                console.log("Migrated from v1 to v2");
             } catch (e) {
-                console.error('Failed to load from storage:', e);
+                console.error("Migration failed", e);
             }
         }
     }
-
-    clearAll() {
-        if (confirm('Are you sure? This will delete ALL your progress!')) {
-            localStorage.removeItem('recursiveStack');
-            this.stack = [];
-            this.nodeIdCounter = 0;
-            this.totalNodes = 0;
-            this.maxDepthReached = 0;
-            this.pushRoot();
-            this.render();
-        }
-    }
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new RecursiveStack());
-} else {
-    new RecursiveStack();
-}
+// Start
+document.addEventListener('DOMContentLoaded', () => new RecursiveStack());

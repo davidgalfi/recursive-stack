@@ -3,80 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Recursive Stack - Deep Learning Tool</title>
+    <title>The Recursive Stack</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🔍 The Recursive Stack</h1>
-            <p class="subtitle">Force yourself to understand deeply, one concept at a time</p>
-        </header>
-
-        <div class="breadcrumbs" id="breadcrumbs">
-            <span class="breadcrumb active">Root</span>
-        </div>
-
-        <div class="depth-indicator" id="depthIndicator">
-            Depth: <span id="currentDepth">0</span>
-        </div>
-
-        <div class="main-content">
-            <div class="question-section">
-                <label for="questionInput">What do you want to understand?</label>
-                <textarea 
-                    id="questionInput" 
-                    placeholder="E.g., 'I need to understand Pointers in C'"
-                    rows="3"></textarea>
+    <div class="app-container">
+        <!-- Sidebar / Stats -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>⚡ Recursive Stack</h1>
+                <p>Depth-First Learning</p>
             </div>
-
-            <div class="answer-section">
-                <label for="answerInput">Your explanation:</label>
-                <textarea 
-                    id="answerInput" 
-                    placeholder="Write your understanding here. Click on any word you're not 100% sure about to dive deeper."
-                    rows="8"></textarea>
-                <div id="clickableWords" class="clickable-words"></div>
-            </div>
-
-            <div class="actions">
-                <button id="saveBtn" class="btn btn-primary" disabled>
-                    💾 Save & Generate Words
-                </button>
-                <button id="popBtn" class="btn btn-secondary" disabled>
-                    ⬆️ Pop Up (Return)
-                </button>
-                <button id="clearBtn" class="btn btn-danger">
-                    🗑️ Clear All Data
-                </button>
-            </div>
-
-            <div class="stats">
-                <div class="stat-item">
-                    <span class="stat-label">Nodes Explored:</span>
-                    <span id="nodeCount" class="stat-value">0</span>
+            
+            <div class="stats-panel">
+                <div class="stat-row">
+                    <span class="stat-label">Current Depth</span>
+                    <span id="currentDepth" class="stat-value">0</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">Max Depth Reached:</span>
+                <div class="stat-row">
+                    <span class="stat-label">Max Depth</span>
                     <span id="maxDepth" class="stat-value">0</span>
                 </div>
+                <div class="stat-row">
+                    <span class="stat-label">Total Nodes</span>
+                    <span id="nodeCount" class="stat-value">0</span>
+                </div>
             </div>
-        </div>
 
-        <div class="help-section">
-            <details>
-                <summary>❓ How to use this tool</summary>
-                <ol>
-                    <li><strong>Start:</strong> Enter your main question/topic</li>
-                    <li><strong>Explain:</strong> Write your understanding in the answer area</li>
-                    <li><strong>Save:</strong> Click "Save & Generate Words" to break your answer into clickable words</li>
-                    <li><strong>Dive:</strong> Click any word you're not 100% certain about - this creates a new level</li>
-                    <li><strong>Return:</strong> Once you've fully understood the deeper concept, click "Pop Up" to return</li>
-                    <li><strong>Repeat:</strong> Keep diving until you hit bedrock understanding</li>
-                </ol>
-                <p class="tip">💡 <strong>The trick:</strong> Be honest with yourself. If there's even 1% doubt about a word, dive into it!</p>
-            </details>
-        </div>
+            <div class="controls">
+                <button id="clearBtn" class="btn btn-danger">
+                    <span class="icon">🗑️</span> Reset All
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Navigation Path -->
+            <nav class="breadcrumbs-container">
+                <div id="breadcrumbs" class="breadcrumbs">
+                    <span class="crumb active">Root</span>
+                </div>
+            </nav>
+
+            <div class="workspace">
+                <!-- Question Header -->
+                <div class="question-header">
+                    <span class="label">CURRENT CONCEPT</span>
+                    <input type="text" id="questionInput" placeholder="What is the core problem?" autocomplete="off">
+                </div>
+
+                <!-- Answer Area -->
+                <div class="editor-section">
+                    <div class="editor-header">
+                        <span class="label">YOUR UNDERSTANDING</span>
+                        <span class="hint">Click words to drill down. "Pop" to finish.</span>
+                    </div>
+                    
+                    <div class="textarea-wrapper">
+                        <textarea 
+                            id="answerInput" 
+                            placeholder="Explain it simply. If you use a word you don't 100% understand, click it to dive deeper."
+                            spellcheck="false"></textarea>
+                    </div>
+
+                    <div id="clickableWords" class="clickable-words-area"></div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button id="saveBtn" class="btn btn-primary" disabled>
+                        <span>Analyize & Link</span>
+                        <span class="shortcut">Cmd/Ctrl + Enter</span>
+                    </button>
+                    <button id="popBtn" class="btn btn-secondary" disabled>
+                        <span>⬆️ Pop Stack (Complete)</span>
+                        <span class="shortcut">Esc</span>
+                    </button>
+                </div>
+
+                <!-- Resolved Children Section -->
+                <div id="resolvedSection" class="resolved-section hidden">
+                    <div class="section-divider">
+                        <span>🧩 COMPLETED SUB-CONCEPTS</span>
+                    </div>
+                    <div id="resolvedContainer" class="resolved-cards">
+                        <!-- Cards will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script src="script.js"></script>
