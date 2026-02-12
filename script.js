@@ -56,7 +56,12 @@ class RecursiveStack {
             viewGraphBtn: document.getElementById('viewGraphBtn'),
             graphModal: document.getElementById('graphModal'),
             closeGraphModal: document.getElementById('closeGraphModal'),
-            graphContainer: document.getElementById('graphContainer')
+            graphContainer: document.getElementById('graphContainer'),
+            // Mobile
+            sidebar: document.getElementById('sidebar'),
+            mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+            closeSidebarBtn: document.getElementById('closeSidebarBtn'),
+            mobileOverlay: document.getElementById('mobileOverlay')
         };
     }
 
@@ -65,11 +70,20 @@ class RecursiveStack {
         this.dom.question.addEventListener('input', () => this.handleQuestionInput());
         this.dom.saveBtn.addEventListener('click', () => this.generateLinks());
         this.dom.popBtn.addEventListener('click', () => this.pop());
-        this.dom.clearBtn.addEventListener('click', () => this.deleteSession());
-        this.dom.newSessionBtn.addEventListener('click', () => this.createNewSession());
+        this.dom.clearBtn.addEventListener('click', () => {
+            this.deleteSession();
+            this.closeSidebar(); // Close on action
+        });
+        this.dom.newSessionBtn.addEventListener('click', () => {
+            this.createNewSession();
+            this.closeSidebar(); // Close on action
+        });
         
         // Export
-        this.dom.exportBtn.addEventListener('click', () => this.showModal(this.dom.exportModal));
+        this.dom.exportBtn.addEventListener('click', () => {
+            this.showModal(this.dom.exportModal);
+            this.closeSidebar();
+        });
         this.dom.closeExportModal.addEventListener('click', () => this.hideModal(this.dom.exportModal));
         this.dom.exportJsonBtn.addEventListener('click', () => this.exportJSON());
         this.dom.exportMdBtn.addEventListener('click', () => this.exportMarkdown());
@@ -78,9 +92,15 @@ class RecursiveStack {
         this.dom.viewGraphBtn.addEventListener('click', () => {
             this.showModal(this.dom.graphModal);
             this.renderGraph();
+            this.closeSidebar();
         });
         this.dom.closeGraphModal.addEventListener('click', () => this.hideModal(this.dom.graphModal));
         
+        // Mobile Sidebar
+        this.dom.mobileMenuBtn.addEventListener('click', () => this.openSidebar());
+        this.dom.closeSidebarBtn.addEventListener('click', () => this.closeSidebar());
+        this.dom.mobileOverlay.addEventListener('click', () => this.closeSidebar());
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -91,11 +111,24 @@ class RecursiveStack {
                     this.hideModal(this.dom.graphModal);
                 } else if (!this.dom.exportModal.classList.contains('hidden')) {
                     this.hideModal(this.dom.exportModal);
+                } else if (this.dom.sidebar.classList.contains('active')) {
+                    this.closeSidebar();
                 } else if (!this.dom.popBtn.disabled) {
                     this.pop();
                 }
             }
         });
+    }
+
+    // --- Mobile Sidebar Logic ---
+    openSidebar() {
+        this.dom.sidebar.classList.add('active');
+        this.dom.mobileOverlay.classList.remove('hidden');
+    }
+
+    closeSidebar() {
+        this.dom.sidebar.classList.remove('active');
+        this.dom.mobileOverlay.classList.add('hidden');
     }
 
     // --- Modal Logic ---
@@ -158,7 +191,6 @@ class RecursiveStack {
         const width = container.clientWidth;
         const height = container.clientHeight;
 
-        // Convert nodes object to D3 array
         const nodes = Object.values(this.nodes).map(n => ({ 
             id: n.id, 
             label: n.question, 
@@ -166,7 +198,6 @@ class RecursiveStack {
             group: n.depth 
         }));
 
-        // Generate links
         const links = [];
         Object.values(this.nodes).forEach(n => {
             if (n.children) {
@@ -210,11 +241,10 @@ class RecursiveStack {
                 .on("drag", dragged)
                 .on("end", dragended));
 
-        // Color scale for depth
         const color = d3.scaleOrdinal(d3.schemeCategory10);
 
         node.append("circle")
-            .attr("r", d => 10 + (d.depth === 0 ? 10 : 0)) // Root is bigger
+            .attr("r", d => 10 + (d.depth === 0 ? 10 : 0))
             .attr("fill", d => color(d.depth));
 
         node.append("text")
@@ -228,26 +258,22 @@ class RecursiveStack {
                 .attr("y1", d => d.source.y)
                 .attr("x2", d => d.target.x)
                 .attr("y2", d => d.target.y);
-
             node
                 .attr("transform", d => `translate(${d.x},${d.y})`);
         });
 
-        // Drag functions
         function dragstarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
         }
-
         function dragged(event, d) {
             d.fx = event.x;
             d.fy = event.y;
         }
-
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null; // Release the node so it springs back
+            d.fx = null;
             d.fy = null;
         }
     }
@@ -328,12 +354,6 @@ class RecursiveStack {
     handleInput() {
         const currentText = this.dom.answer.value.trim();
         const node = this.nodes[this.currentId];
-        
-        // Logic: Enable save if text is different from saved OR if empty (to disable)
-        // Wait, if empty -> Disable.
-        // If same as saved -> Show "Analyzed" state (Secondary).
-        // If different -> Show "Analyze" state (Primary).
-
         const isEmpty = currentText.length === 0;
         const isSaved = currentText === node.answer.trim();
 
@@ -342,12 +362,10 @@ class RecursiveStack {
             this.dom.saveBtn.innerHTML = `<span>Analyze & Link</span><span class="shortcut">Cmd/Ctrl + Enter</span>`;
             this.dom.saveBtn.className = 'btn btn-primary';
         } else if (isSaved) {
-            // Already saved/analyzed
             this.dom.saveBtn.disabled = false;
             this.dom.saveBtn.innerHTML = `<span>✅ Links Updated</span><span class="shortcut">Cmd/Ctrl + Enter</span>`;
-            this.dom.saveBtn.className = 'btn btn-secondary'; // Visual cue
+            this.dom.saveBtn.className = 'btn btn-secondary';
         } else {
-            // Changed / Dirty
             this.dom.saveBtn.disabled = false;
             this.dom.saveBtn.innerHTML = `<span>Analyze & Link</span><span class="shortcut">Cmd/Ctrl + Enter</span>`;
             this.dom.saveBtn.className = 'btn btn-primary';
@@ -372,7 +390,6 @@ class RecursiveStack {
         const uniqueTokens = [...new Set(tokens)];
 
         this.dom.clickableWords.innerHTML = '';
-        
         uniqueTokens.forEach(token => {
             const btn = document.createElement('span');
             btn.className = 'word';
@@ -382,8 +399,6 @@ class RecursiveStack {
         });
 
         this.dom.popBtn.disabled = this.path.length <= 1;
-        
-        // Update button state immediately
         this.handleInput(); 
     }
 
@@ -401,23 +416,15 @@ class RecursiveStack {
         const node = this.nodes[this.currentId];
         this.dom.question.value = node.question;
         this.dom.answer.value = node.answer;
-        
-        // Update button states
-        this.handleInput(); // Re-evaluates save button state based on loaded text
+        this.handleInput(); 
         this.dom.popBtn.disabled = this.path.length <= 1;
-        
         this.dom.depth.textContent = node.depth;
         this.dom.maxDepth.textContent = this.maxDepthReached;
         this.dom.nodeCount.textContent = Object.keys(this.nodes).length;
-        
         this.renderBreadcrumbs();
         this.renderResolvedChildren(node);
         this.renderGoal();
-        
-        // Always regenerate links if text exists, to ensure UI is consistent
         if (node.answer) {
-             // We duplicate logic here to avoid re-saving to DB during render, which caused recursion logic issues before
-             // Just purely visual generation:
             const tokens = node.answer.match(/[\p{L}\d']+/gu) || [];
             const uniqueTokens = [...new Set(tokens)];
             this.dom.clickableWords.innerHTML = '';
@@ -454,6 +461,7 @@ class RecursiveStack {
                 if (id !== this.currentSessionId) {
                     this.loadSession(id);
                     this.renderSessionList();
+                    this.closeSidebar(); // Auto-close on mobile
                 }
             };
             this.dom.sessionList.appendChild(div);
